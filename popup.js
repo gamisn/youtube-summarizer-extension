@@ -36,6 +36,8 @@ function sendMessageToTab(tabId, message) {
   return new Promise((resolve) => chrome.tabs.sendMessage(tabId, message, resolve));
 }
 
+let lastState = null;
+
 function renderState(state) {
   const isPremium = state.tier === 'PREMIUM';
   tierBadgeEl.textContent = isPremium ? 'PREMIUM' : 'FREE';
@@ -45,11 +47,17 @@ function renderState(state) {
   licenseSection.classList.toggle('hidden', isPremium);
   manageLicenseEl.classList.toggle('hidden', !isPremium);
   upgradeEl.classList.toggle('hidden', isPremium);
+  if (!state.apiKeyConfigured) {
+    setStatus('This extension uses your own LLM API key (free plan included). Add it in Settings to start summarizing.', true);
+  }
 }
 
 async function refreshState() {
   const res = await sendRuntimeMessage({ type: 'GET_STATE' });
-  if (res?.ok) renderState(res);
+  if (res?.ok) {
+    lastState = res;
+    renderState(res);
+  }
   return res;
 }
 
@@ -101,6 +109,11 @@ async function copyOrExport() {
 }
 
 async function summarizeCurrentVideo() {
+  if (lastState && !lastState.apiKeyConfigured) {
+    setStatus('Add your API key in Settings first — the free plan is bring-your-own-key.', true);
+    return;
+  }
+
   resultEl.classList.add('hidden');
   setStatus('Inspecting current tab...');
 

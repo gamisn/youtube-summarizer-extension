@@ -8,8 +8,9 @@
     "https://www.youtube.com/*",
     "https://*.youtube.com/*",
     "https://api.openai.com/*",
-    "<all_urls>"
+    "https://api.lemonsqueezy.com/*"
   ],
+  "optional_host_permissions": ["https://*/*"],
   "background": {
     "service_worker": "background.js",
     "type": "module"

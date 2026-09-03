@@ -4,6 +4,7 @@ import { getLicenseState } from './license.js';
 export const ENTITLEMENTS = {
   FREE: {
     summaryTypes: ['bullets', 'key_takeaways', 'detailed'],
+    singleShotChars: 30000,
     maxTranscriptChars: 30000,
     longVideoChunking: false,
     timestamps: false,
@@ -12,6 +13,7 @@ export const ENTITLEMENTS = {
   },
   PREMIUM: {
     summaryTypes: ['bullets', 'key_takeaways', 'detailed'],
+    singleShotChars: 30000,
     maxTranscriptChars: 400000,
     longVideoChunking: true,
     timestamps: true,
