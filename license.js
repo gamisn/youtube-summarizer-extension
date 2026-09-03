@@ -6,6 +6,10 @@ const LS_ACTIVATE_API = 'https://api.lemonsqueezy.com/v1/licenses/activate';
 // TODO(owner): paste the Lemon Squeezy purchase link for the extension product.
 export const PRODUCT_URL = 'https://REPLACE-ME.lemonsqueezy.com/checkout';
 
+// TODO(owner): fill in after creating the Lemon Squeezy product, so keys from
+// other products/stores can't unlock premium. Empty array = check skipped.
+const EXPECTED_PRODUCT_IDS = [];
+
 const GRACE_MS = 7 * 24 * 60 * 60 * 1000; // offline grace for last successful validation
 
 export async function getLicenseState() {
@@ -27,7 +31,14 @@ export async function getLicenseState() {
       body: JSON.stringify({ license_key: license.key })
     });
     const data = await res.json();
-    const valid = !!(data && data.valid === true && data.status === 'active');
+    // LS validate response: top-level "valid", license status inside license_key
+    // (there is no top-level "status" field).
+    const valid = !!(
+      data &&
+      data.valid === true &&
+      data.license_key?.status === 'active' &&
+      (EXPECTED_PRODUCT_IDS.length === 0 || EXPECTED_PRODUCT_IDS.includes(data.meta?.product_id))
+    );
     const entry = { key: license.key, valid, checkedAt: Date.now(), expires_at: data?.license_key?.expires_at || null };
     await chrome.storage.local.set({ licenseCache: entry });
     return { premium: valid, reason: valid ? 'validated' : 'invalid' };
@@ -55,23 +66,30 @@ export function currentWeekStart(date = new Date()) {
   return d.toISOString().slice(0, 10);
 }
 
-export async function checkAndConsumeQuota(freeLimit = 10) {
+const FREE_LIMIT = 10;
+
+// Usage for the current week, resetting stale weeks without writing.
+// Used by both the quota gate and GET_STATE so the popup never shows a
+// stale count from a previous week.
+export async function getWeeklyUsage() {
   const { usage = null } = await chrome.storage.local.get('usage');
   const week = currentWeekStart();
-  const u = usage && usage.weekStart === week ? usage : { weekStart: week, count: 0 };
+  return usage && usage.weekStart === week ? usage : { weekStart: week, count: 0 };
+}
 
-  const state = await getLicenseState();
-  if (state.premium) {
-    u.count += 1;
-    u.weekStart = week;
-    await chrome.storage.local.set({ usage: u });
-    return { allowed: true, premium: true, count: u.count, limit: null };
-  }
-  if (u.count >= 10) {
-    return { allowed: false, premium: false, count: u.count, limit: 10, upgrade: true };
-  }
+// Read-only gate check. Consuming happens separately (consumeQuota) so a
+// failed or rejected summary never burns quota.
+export async function checkQuota() {
+  const [u, state] = [await getWeeklyUsage(), await getLicenseState()];
+  if (state.premium) return { allowed: true, premium: true, count: u.count, limit: null };
+  if (u.count >= FREE_LIMIT) return { allowed: false, premium: false, count: u.count, limit: FREE_LIMIT, upgrade: true };
+  return { allowed: true, premium: false, count: u.count, limit: FREE_LIMIT };
+}
+
+// Call only after a summary has actually succeeded.
+export async function consumeQuota() {
+  const u = await getWeeklyUsage();
   u.count += 1;
-  u.weekStart = week;
   await chrome.storage.local.set({ usage: u });
-  return { allowed: true, premium: false, count: u.count, limit: 10 };
+  return u;
 }

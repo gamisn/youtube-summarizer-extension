@@ -8,6 +8,14 @@ export function chunkTranscript(transcript, maxChars = TARGET_CHUNK_CHARS) {
   const chunks = [];
   let buf = '';
   for (const s of sentences) {
+    // Auto-generated captions often lack sentence punctuation — a single
+    // "sentence" can exceed the budget, so hard-split it.
+    if (s.length > maxChars) {
+      if (buf.trim()) chunks.push(buf.trim());
+      buf = '';
+      for (let i = 0; i < s.length; i += maxChars) chunks.push(s.slice(i, i + maxChars));
+      continue;
+    }
     if ((buf + ' ' + s).length > maxChars && buf) {
       chunks.push(buf.trim());
       buf = s;
@@ -23,14 +31,12 @@ export async function summarizeLongVideo(request, callLlm) {
   const chunks = chunkTranscript(request.transcript);
   if (chunks.length <= 1) return null; // caller falls back to normal path
 
-  const partials = [];
-  for (let i = 0; i < chunks.length; i++) {
-    const part = await callLlm({
+  const partials = await Promise.all(chunks.map((chunk, i) =>
+    callLlm({
       system: 'You summarize PART ' + (i + 1) + '/' + chunks.length + ' of a long video transcript. Capture all key points, names, numbers faithfully. Be dense.',
-      user: 'Part ' + (i + 1) + '/' + chunks.length + ' of: "' + request.title + '"\n\n' + chunks[i]
-    });
-    partials.push(part);
-  }
+      user: 'Part ' + (i + 1) + '/' + chunks.length + ' of: "' + request.title + '"\n\n' + chunk
+    })
+  ));
 
   const merged = await callLlm({
     system: request.systemPrompt || 'You are a precise assistant that summarizes YouTube transcripts.',
