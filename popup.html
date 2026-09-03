@@ -1,38 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>YouTube Summarizer</title>
+  <meta charset="utf-8" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main class="container">
-    <h1>YouTube Summarizer</h1>
-    <p class="subtle">Summarize the current YouTube video from its transcript.</p>
+  <div class="popup">
+    <div class="header-row">
+      <h1>YouTube Summarizer</h1>
+      <span id="tierBadge" class="badge badge-free">FREE</span>
+    </div>
+    <div id="quota" class="quota"></div>
 
-    <label class="field">
-      <span>Summary style</span>
+    <div class="row">
+      <label for="summaryType">Summary style</label>
       <select id="summaryType">
-        <option value="bullets">Bulleted summary</option>
+        <option value="bullets">Bullets</option>
         <option value="key_takeaways">Key takeaways</option>
-        <option value="detailed">Detailed summary</option>
+        <option value="detailed">Detailed</option>
       </select>
-    </label>
-
-    <label class="field">
-      <span>Optional custom prompt</span>
-      <textarea id="customPrompt" rows="4" placeholder="Example: focus on actionable advice and mention timestamps if possible"></textarea>
-    </label>
-
-    <div class="actions">
-      <button id="summarizeBtn">Summarize current video</button>
-      <button id="openOptionsBtn" class="secondary">Settings</button>
     </div>
 
-    <div id="status" class="status"></div>
-    <section id="result" class="result hidden"></section>
-  </main>
+    <div class="row">
+      <label for="customPrompt">Custom instruction (optional)</label>
+      <textarea id="customPrompt" rows="2" placeholder="e.g. focus on pricing and action items"></textarea>
+    </div>
+
+    <button id="summarizeBtn">Summarize current video</button>
+    <button id="exportBtn" class="secondary">Copy / Export .md</button>
+
+    <div id="licenseSection" class="license-box hidden">
+      <label for="licenseKey">Premium license key</label>
+      <input type="text" id="licenseKey" placeholder="Paste license key" />
+      <button id="activateBtn">Activate</button>
+      <a id="upgradeLink" href="#" class="upgrade-link">Get Premium — unlimited, long videos, export →</a>
+    </div>
+
+    <div id="manageLicense" class="license-managed hidden">
+      Premium is active. Manage billing in your Lemon Squeezy email receipt.
+    </div>
+
+    <div id="status"></div>
+    <pre id="result" class="hidden"></pre>
+
+    <button id="openOptionsBtn" class="link-button">Settings</button>
+  </div>
   <script type="module" src="popup.js"></script>
 </body>
 </html>

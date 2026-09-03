@@ -46,6 +46,7 @@ textarea { resize: vertical; min-height: 90px; }
   gap: 10px;
   margin: 16px 0;
 }
+.saveBtn,
 button {
   cursor: pointer;
   background: var(--accent);
@@ -53,6 +54,44 @@ button {
   font-weight: 600;
 }
 button.secondary { background: var(--accent-2); }
+.license-panel {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+.license-panel h2 { font-size: 15px; margin: 0 0 10px; }
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.4px;
+}
+.badge-free { background: #374151; color: #d1d5db; }
+.badge-premium { background: #f59e0b; color: #111827; }
+.header-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.quota { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+.license-box {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.license-managed { color: var(--muted); font-size: 12px; margin-top: 10px; }
+.upgrade-link { color: var(--accent-2); font-size: 12px; }
+.upgrade-link.attention { color: #fbbf24; font-weight: 700; }
+.link-button {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  font-weight: 400;
+  margin-top: 8px;
+  text-decoration: underline;
+}
 .status {
   min-height: 22px;
   color: var(--muted);

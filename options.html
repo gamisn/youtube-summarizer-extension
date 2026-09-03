@@ -11,6 +11,19 @@
     <h1>Settings</h1>
     <p class="subtle">Configure an OpenAI-compatible chat completions endpoint.</p>
 
+    <div class="license-panel">
+      <h2>Premium license</h2>
+      <label class="field">
+        <span>License key (leave empty on free plan)</span>
+        <input id="licenseKey" type="text" placeholder="Paste license key from Lemon Squeezy" />
+      </label>
+      <div class="actions">
+        <button id="activateBtn" class="secondary">Activate license</button>
+        <button id="clearLicenseBtn" class="ghost">Remove license</button>
+      </div>
+      <div id="licenseStatus" class="status"></div>
+    </div>
+
     <label class="field">
       <span>API endpoint</span>
       <input id="apiBaseUrl" type="url" placeholder="https://api.openai.com/v1/chat/completions" />
