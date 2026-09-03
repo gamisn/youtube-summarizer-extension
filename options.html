@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Summarizer Settings</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container options">
+    <h1>Settings</h1>
+    <p class="subtle">Configure an OpenAI-compatible chat completions endpoint.</p>
+
+    <label class="field">
+      <span>API endpoint</span>
+      <input id="apiBaseUrl" type="url" placeholder="https://api.openai.com/v1/chat/completions" />
+    </label>
+
+    <label class="field">
+      <span>API key</span>
+      <input id="apiKey" type="password" placeholder="sk-..." />
+    </label>
+
+    <label class="field">
+      <span>Model</span>
+      <input id="model" type="text" placeholder="gpt-4.1-mini" />
+    </label>
+
+    <label class="field">
+      <span>System prompt</span>
+      <textarea id="systemPrompt" rows="6" placeholder="You are a precise video summarizer..."></textarea>
+    </label>
+
+    <div class="actions">
+      <button id="saveBtn">Save settings</button>
+    </div>
+
+    <div id="status" class="status"></div>
+  </main>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

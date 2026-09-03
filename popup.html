@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Summarizer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>YouTube Summarizer</h1>
+    <p class="subtle">Summarize the current YouTube video from its transcript.</p>
+
+    <label class="field">
+      <span>Summary style</span>
+      <select id="summaryType">
+        <option value="bullets">Bulleted summary</option>
+        <option value="key_takeaways">Key takeaways</option>
+        <option value="detailed">Detailed summary</option>
+      </select>
+    </label>
+
+    <label class="field">
+      <span>Optional custom prompt</span>
+      <textarea id="customPrompt" rows="4" placeholder="Example: focus on actionable advice and mention timestamps if possible"></textarea>
+    </label>
+
+    <div class="actions">
+      <button id="summarizeBtn">Summarize current video</button>
+      <button id="openOptionsBtn" class="secondary">Settings</button>
+    </div>
+
+    <div id="status" class="status"></div>
+    <section id="result" class="result hidden"></section>
+  </main>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
