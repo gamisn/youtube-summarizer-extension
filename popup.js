@@ -33,7 +33,25 @@ async function getActiveTab() {
 }
 
 function sendMessageToTab(tabId, message) {
-  return new Promise((resolve) => chrome.tabs.sendMessage(tabId, message, resolve));
+  return new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(tabId, message, (response) => {
+      // Read lastError even on failure, or Chrome logs "Unchecked runtime.lastError".
+      const err = chrome.runtime.lastError;
+      if (err) reject(new Error(err.message));
+      else resolve(response);
+    });
+  });
+}
+
+// After an extension reload (or SPA navigation) existing YouTube tabs have no
+// live content script. activeTab + scripting let the popup inject it on demand.
+async function getVideoContext(tab) {
+  try {
+    return await sendMessageToTab(tab.id, { type: 'GET_VIDEO_CONTEXT' });
+  } catch (_) {
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+    return await sendMessageToTab(tab.id, { type: 'GET_VIDEO_CONTEXT' });
+  }
 }
 
 let lastState = null;
@@ -124,7 +142,13 @@ async function summarizeCurrentVideo() {
   }
 
   setStatus('Extracting transcript...');
-  const contextResponse = await sendMessageToTab(tab.id, { type: 'GET_VIDEO_CONTEXT' });
+  let contextResponse = null;
+  try {
+    contextResponse = await getVideoContext(tab);
+  } catch (_) {
+    setStatus('Could not reach the page — refresh the YouTube tab and try again.', true);
+    return;
+  }
   if (!contextResponse?.ok) {
     setStatus(contextResponse?.error || 'Could not read transcript from the page.', true);
     return;
