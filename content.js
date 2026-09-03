@@ -28,20 +28,31 @@ function parsePlayerResponseFromScripts() {
   return null;
 }
 
-async function fetchTranscriptXml(baseUrl) {
-  const response = await fetch(baseUrl + '&fmt=srv3', { credentials: 'include' });
+async function fetchTranscriptXml(baseUrl, fmt) {
+  const url = fmt ? baseUrl + '&fmt=' + fmt : baseUrl;
+  const response = await fetch(url, { credentials: 'include' });
   if (!response.ok) {
     throw new Error(`Transcript fetch failed with ${response.status}`);
   }
   return response.text();
 }
 
+// Legacy timedtext (no fmt / srv1) exposes <text> nodes; srv3 exposes
+// <body><p><s>…</s></p></body> instead. Handle both.
 function extractTranscriptText(xmlText) {
   const parser = new DOMParser();
   const xml = parser.parseFromString(xmlText, 'text/xml');
-  const nodes = Array.from(xml.getElementsByTagName('text'));
 
-  return nodes
+  const legacyNodes = Array.from(xml.getElementsByTagName('text'));
+  if (legacyNodes.length) {
+    return legacyNodes
+      .map((node) => decodeHtmlEntities(node.textContent || '').replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+  }
+
+  return Array.from(xml.getElementsByTagName('p'))
     .map((node) => decodeHtmlEntities(node.textContent || '').replace(/\s+/g, ' ').trim())
     .filter(Boolean)
     .join(' ')
@@ -62,8 +73,13 @@ async function getTranscriptFromPlayerResponse() {
   }
 
   const preferredTrack = captionTracks.find((track) => track.languageCode?.startsWith('en')) || captionTracks[0];
-  const xml = await fetchTranscriptXml(preferredTrack.baseUrl);
-  const transcript = extractTranscriptText(xml);
+  // Legacy format first (matches the <text> parser); srv3 as fallback.
+  let xml = await fetchTranscriptXml(preferredTrack.baseUrl);
+  let transcript = extractTranscriptText(xml);
+  if (!transcript) {
+    xml = await fetchTranscriptXml(preferredTrack.baseUrl, 'srv3');
+    transcript = extractTranscriptText(xml);
+  }
 
   if (!transcript) {
     throw new Error('Transcript was empty after parsing captions.');
