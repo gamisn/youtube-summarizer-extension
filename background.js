@@ -1,5 +1,5 @@
-import { checkAndConsumeQuota, getLicenseState } from './license.js';
-import { getEntitlements, requiresPremium } from './entitlements.js';
+import { checkQuota, consumeQuota, getWeeklyUsage, saveLicenseKey, PRODUCT_URL } from './license.js';
+import { getEntitlements } from './entitlements.js';
 import { summarizeLongVideo } from './longform.js';
 
 const DEFAULT_SETTINGS = {
@@ -74,38 +74,50 @@ async function handleSummarize(request) {
 
   const ent = await getEntitlements();
 
-  // Quota gate (premium = unlimited, still counted for analytics)
-  const quota = await checkAndConsumeQuota();
+  // Quota gate (premium = unlimited). Quota is consumed only after a
+  // successful summary — see consumeQuota below.
+  const quota = await checkQuota();
   if (!quota.allowed) {
     const err = new Error(`Free plan limit reached (${quota.count}/${quota.limit} this week). Upgrade to Premium for unlimited summaries.`);
     err.code = 'UPGRADE';
     throw err;
   }
 
-  // Transcript length gate
-  if (request.transcript.length > ent.maxTranscriptChars) {
+  // Transcript length gate: hard cap first, then chunking eligibility.
+  const len = request.transcript.length;
+  if (len > ent.maxTranscriptChars) {
     if (!ent.longVideoChunking) {
-      const err = new Error(`This transcript is ${Math.round(request.transcript.length / 1000)}K chars — the free tier handles up to ${Math.round(ent.maxTranscriptChars / 1000)}K. Premium summarizes videos of any length.`);
+      const err = new Error(`This transcript is ${Math.round(len / 1000)}K chars — the free tier handles up to ${Math.round(ent.maxTranscriptChars / 1000)}K. Premium summarizes videos of any length.`);
       err.code = 'UPGRADE';
       throw err;
     }
-    const result = await summarizeLongVideo(
+    throw new Error(`This transcript is ${Math.round(len / 1000)}K chars — above the ${Math.round(ent.maxTranscriptChars / 1000)}K limit.`);
+  }
+
+  let result;
+  if (len > ent.singleShotChars && ent.longVideoChunking) {
+    const longform = await summarizeLongVideo(
       { ...request, systemPrompt: settings.systemPrompt, summaryInstruction: SUMMARY_INSTRUCTIONS[request.summaryType] },
       (call) => callLlm(call, settings)
     );
-    if (result) {
-      await saveHistory({ title: request.title, videoUrl: request.videoUrl, summary: result.summary, parts: result.parts }, ent.history);
-      return { summary: result.summary, mode: 'longform', parts: result.parts };
+    if (longform) {
+      result = { summary: longform.summary, mode: 'longform', parts: longform.parts };
     }
   }
 
-  const summary = await callLlm(
-    { system: settings.systemPrompt, user: buildUserPrompt(request) },
-    settings
-  );
+  if (!result) {
+    const summary = await callLlm(
+      { system: settings.systemPrompt, user: buildUserPrompt(request) },
+      settings
+    );
+    result = { summary, mode: 'single' };
+  }
 
-  await saveHistory({ title: request.title, videoUrl: request.videoUrl, summary }, ent.history);
-  return { summary, mode: 'single' };
+  await consumeQuota();
+  const entry = { title: request.title, videoUrl: request.videoUrl, summary: result.summary };
+  if (result.parts) entry.parts = result.parts;
+  await saveHistory(entry, ent.history);
+  return result;
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -118,17 +130,26 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message?.type === 'GET_STATE') {
     (async () => {
-      const ent = await getEntitlements();
-      const { usage = null } = await chrome.storage.local.get('usage');
-      const { history = [] } = await chrome.storage.local.get('history');
-      sendResponse({ ok: true, tier: ent.tier, reason: ent.reason, usage: usage || { count: 0 }, history });
+      const [ent, usage, { history = [] }, settings] = await Promise.all([
+        getEntitlements(),
+        getWeeklyUsage(),
+        chrome.storage.local.get('history'),
+        getSettings()
+      ]);
+      sendResponse({
+        ok: true,
+        tier: ent.tier,
+        reason: ent.reason,
+        usage,
+        history,
+        apiKeyConfigured: !!settings.apiKey?.trim()
+      });
     })().catch((e) => sendResponse({ ok: false, error: e.message }));
     return true;
   }
 
   if (message?.type === 'GET_PRODUCT_URL') {
     (async () => {
-      const { PRODUCT_URL } = await import('./license.js');
       sendResponse({ ok: true, url: PRODUCT_URL });
     })().catch((e) => sendResponse({ ok: false, error: e.message }));
     return true;
@@ -136,7 +157,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message?.type === 'ACTIVATE_LICENSE') {
     (async () => {
-      const { saveLicenseKey } = await import('./license.js');
       const state = await saveLicenseKey(message.key);
       sendResponse({ ok: true, premium: state.premium, reason: state.reason });
     })().catch((e) => sendResponse({ ok: false, error: e.message }));

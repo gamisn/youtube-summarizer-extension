@@ -40,6 +40,27 @@ async function loadSettings() {
   }
 }
 
+// Custom LLM endpoints aren't in the default host permissions — request
+// access to the saved endpoint's origin at save time.
+async function ensureEndpointPermission(apiBaseUrl) {
+  let origin;
+  try {
+    origin = new URL(apiBaseUrl).origin;
+  } catch (_) {
+    return 'Could not parse the API endpoint URL.';
+  }
+  const pattern = origin + '/*';
+  const alreadyGranted = await chrome.permissions.contains({ origins: [pattern] });
+  if (alreadyGranted || origin === 'https://api.openai.com') return null;
+  try {
+    const granted = await chrome.permissions.request({ origins: [pattern] });
+    if (!granted) return 'Permission to reach the endpoint was declined — summaries will fail until it is granted.';
+  } catch (_) {
+    return 'Could not request permission to reach the endpoint.';
+  }
+  return null;
+}
+
 async function saveSettings() {
   const payload = {
     apiBaseUrl: apiBaseUrlEl.value.trim(),
@@ -53,8 +74,9 @@ async function saveSettings() {
     return;
   }
 
+  const permError = await ensureEndpointPermission(payload.apiBaseUrl);
   await chrome.storage.sync.set(payload);
-  setStatus('Settings saved.');
+  setStatus(permError ? `Settings saved. ${permError}` : 'Settings saved.', !!permError);
 }
 
 async function activateLicense() {

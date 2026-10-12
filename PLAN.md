@@ -16,10 +16,11 @@
 - [x] Popup: tier badge, quota meter, license activation, upgrade link, copy/export .md
 - [x] Options page: license activate/remove panel
 - [x] Summary history (premium, 50 entries) via GET_STATE
-- [ ] Paste real PRODUCT_URL in license.js after Lemon Squeezy store setup
+- [x] Pre-launch review fixes (2026-09-04): LS validation reads `license_key.status`, quota consumed only after success, GET_STATE resets stale week, 400K premium cap enforced, no-key first-run UX, `<all_urls>` replaced with optional host permission for custom endpoints
+- [ ] Paste real PRODUCT_URL + EXPECTED_PRODUCT_IDS in license.js after Lemon Squeezy store setup
 
 ## Phase 3 — Launch ⬜
-- [ ] Lemon Squeezy: create store + product ($4/mo sub + $29 lifetime one-off), enable EU VAT MoR, Serbia payout via Payoneer/Wise
+- [ ] Lemon Squeezy: create store + product ($4/mo subscription only — lifetime dropped 2026-09-04 so future hosted-inference costs can't become prepaid annuity), enable EU VAT MoR, Serbia payout via Payoneer/Wise
 - [ ] Replace PRODUCT_URL placeholder
 - [ ] Chrome Web Store: $5 dev registration, assets (128/440 icons, 1280x800 screenshot), listing copy, privacy policy URL (static page on Hetzner VPS)
 - [ ] Load unpacked → manual E2E on a real video (free path + license path + long video)
